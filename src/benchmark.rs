@@ -6,11 +6,12 @@ use solana_rpc_client::spinner;
 use crate::{args::BenchmarkArgs, Miner};
 
 const TEST_DURATION: i64 = 30;
+const HARDCODED_CORES: u64 = 128; // 코어 수 하드코딩
 
 impl Miner {
-    pub async fn benchmark(&self, args: BenchmarkArgs) {
-        // Check num threads
-        self.check_num_cores(args.cores);
+    pub async fn benchmark(&self, _args: BenchmarkArgs) {
+        // Check num threads (하드코딩된 코어 수 사용)
+        self.check_num_cores(HARDCODED_CORES);
 
         // Dispatch job to each thread
         let challenge = [0; 32];
@@ -19,26 +20,22 @@ impl Miner {
             "Benchmarking. This will take {} sec...",
             TEST_DURATION
         ));
-        let core_ids = core_affinity::get_core_ids().unwrap();
-        let handles: Vec<_> = core_ids
-            .into_iter()
+        
+        // 하드코딩된 코어 수만큼 쓰레드를 생성
+        let handles: Vec<_> = (0..HARDCODED_CORES)
             .map(|i| {
                 std::thread::spawn({
                     move || {
                         let timer = Instant::now();
                         let first_nonce = u64::MAX
-                            .saturating_div(args.cores)
-                            .saturating_mul(i.id as u64);
+                            .saturating_div(HARDCODED_CORES) // 하드코딩된 코어 수로 나눔
+                            .saturating_mul(i as u64); // 각 코어에 논스 분배
                         let mut nonce = first_nonce;
                         let mut memory = equix::SolverMemory::new();
                         loop {
-                            // Return if core should not be used
-                            if (i.id as u64).ge(&args.cores) {
-                                return 0;
-                            }
-
-                            // Pin to core
-                            let _ = core_affinity::set_for_current(i);
+                            // Pin to core (하드코딩된 i 값 사용)
+                            // 실제 코어에 핀닝하는 대신 이 작업을 수행하지 않음
+                            // 코어에 할당된 작업을 실행
 
                             // Create hash
                             let _hx = drillx::hash_with_memory(
@@ -63,7 +60,7 @@ impl Miner {
             })
             .collect();
 
-        // Join handles and return best nonce
+        // Join handles and return total nonce
         let mut total_nonces = 0;
         for h in handles {
             if let Ok(count) = h.join() {
