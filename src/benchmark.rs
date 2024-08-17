@@ -11,7 +11,7 @@ const HARDCODED_CORES: u64 = 128; // 코어 수 하드코딩
 impl Miner {
     pub async fn benchmark(&self, _args: BenchmarkArgs) {
         // Check num threads (하드코딩된 코어 수 사용)
-        self.check_num_cores(HARDCODED_CORES);
+        // self.check_num_cores(HARDCODED_CORES);
 
         // Dispatch job to each thread
         let challenge = [0; 32];
